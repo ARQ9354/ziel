@@ -1,0 +1,6 @@
+{
+  "name": "Ziel",
+  "description": "An elegant, lightweight Notion clone named Ziel, featuring a side-by-side hierarchical sidebar, interactive databases with customizable properties, a document editor, automatic relations, rich node-graph visualizations, and AI-powered copilot recommendations.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
