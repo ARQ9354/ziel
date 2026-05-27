@@ -7,6 +7,13 @@ export interface DatabasePropertyConfig {
   options?: string[]; // Used for 'select'
 }
 
+export interface PageComment {
+  id: string;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
 export interface DocumentPage {
   id: string;
   title: string;
@@ -19,6 +26,8 @@ export interface DocumentPage {
   parentId: string | null; // For hierarchical page support
   properties: Record<string, any>; // Key-value for database columns
   propertyConfigs?: DatabasePropertyConfig[]; // Schema if isDatabase is true
+  coverImage?: string; // Beautiful cover banner background
+  comments?: PageComment[]; // Notion-like page discussion/comments
 }
 
 export interface LinkConnection {
