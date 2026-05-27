@@ -23,6 +23,12 @@ import {
   Columns
 } from 'lucide-react';
 
+
+const generateUniqueId = (prefix: string) => {
+  const rand = Math.random().toString(36).substring(2, 9);
+  return `${prefix}-${Date.now()}-${rand}`;
+};
+
 export default function App() {
   // Collapsible sidebar state
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(() => {
@@ -98,7 +104,7 @@ export default function App() {
   // Helper: Append diagnostic log messages
   const addLog = (ruleName: string, details: string) => {
     const newLog: AutomationLog = {
-      id: `log-${Date.now()}`,
+      id: generateUniqueId('log'),
       ruleName,
       timestamp: new Date().toISOString(),
       status: 'success',
@@ -175,7 +181,7 @@ export default function App() {
     initialProperties?: Record<string, any>,
     customTitle?: string
   ) => {
-    const newId = `page-${Date.now()}`;
+    const newId = generateUniqueId('page');
     const newPage: DocumentPage = {
       id: newId,
       title: customTitle || (isDatabase ? 'Untitled Database' : isDatabaseRowId ? 'Untitled Node entry' : 'Untitled Document'),
@@ -191,8 +197,8 @@ export default function App() {
       properties: initialProperties || {},
       propertyConfigs: isDatabase
         ? [
-            { id: `prop-${Date.now()}-1`, name: 'Status', type: 'select', options: ['Idea', 'In Progress', 'Done'] },
-            { id: `prop-${Date.now()}-2`, name: 'Priority', type: 'select', options: ['High', 'Medium', 'Low'] },
+            { id: generateUniqueId('prop-status'), name: 'Status', type: 'select', options: ['Idea', 'In Progress', 'Done'] },
+            { id: generateUniqueId('prop-priority'), name: 'Priority', type: 'select', options: ['High', 'Medium', 'Low'] },
           ]
         : undefined,
     };
@@ -295,7 +301,7 @@ export default function App() {
             ...p,
             propertyConfigs: [
               ...currentConfigs,
-              { id: `prop-cfg-${Date.now()}`, name, type, options },
+              { id: generateUniqueId('prop-cfg'), name, type, options },
             ],
           };
         }
@@ -322,7 +328,7 @@ export default function App() {
   const handleAddAutomationRule = (rule: Omit<AutomationRule, 'id'>) => {
     const newRule: AutomationRule = {
       ...rule,
-      id: `rule-${Date.now()}`,
+      id: generateUniqueId('rule'),
     };
     setAutomations((prev) => [...prev, newRule]);
     addLog('System Rule Engine', `Successfully registered new automation trigger: "${rule.name}".`);

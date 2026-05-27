@@ -19,7 +19,10 @@ import {
   ChevronDown,
   Layout,
   FileText,
-  MousePointerClick
+  MousePointerClick,
+  AlignLeft,
+  Search,
+  BookOpen
 } from 'lucide-react';
 
 interface DocumentEditorProps {
@@ -57,6 +60,63 @@ export default function DocumentEditor({
   const [showComments, setShowComments] = useState(true);
   const [commentText, setCommentText] = useState('');
   const [commenterName, setCommenterName] = useState('Bruce Banner');
+
+  // ---------- TABLE OF CONTENTS GENERATOR STATE & CALCULATOR ----------
+  const [showToc, setShowToc] = useState(true);
+  const [tocSearch, setTocSearch] = useState('');
+
+  // Automatically scan page content for #, ##, and ### headings
+  const headings = useMemo(() => {
+    if (!page.content) return [];
+    const lines = page.content.split('\n');
+    const scanned: { id: string; text: string; level: 1 | 2 | 3; lineIndex: number }[] = [];
+    
+    lines.forEach((line, index) => {
+      // Matches lines starting with #, ##, or ###
+      const match = line.match(/^(#{1,3})\s+(.+)$/);
+      if (match) {
+        const level = match[1].length as 1 | 2 | 3;
+        const text = match[2].trim().replace(/[\*_~`\[\]]/g, '');
+        scanned.push({
+          id: `heading-${index}-${level}-${text.substring(0, 10)}`,
+          text,
+          level,
+          lineIndex: index,
+        });
+      }
+    });
+    return scanned;
+  }, [page.content]);
+
+  // Document metrics: Word count and estimated reading time
+  const { wordCount, readingTime } = useMemo(() => {
+    if (!page.content) return { wordCount: 0, readingTime: 0 };
+    const cleanText = page.content.replace(/[#\*_~`>\-\[\]()]/g, ' ');
+    const words = cleanText.trim().split(/\s+/).filter(Boolean);
+    const count = words.length;
+    const time = Math.max(1, Math.ceil(count / 200));
+    return { wordCount: count, readingTime: time };
+  }, [page.content]);
+
+  // Click handler to select and scroll to the heading line inside the textarea
+  const handleHeadingClick = (lineIndex: number) => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const lines = page.content.split('\n');
+    
+    let charIndex = 0;
+    for (let i = 0; i < lineIndex; i++) {
+      charIndex += lines[i].length + 1; // Count characters plus newline
+    }
+    
+    textarea.focus();
+    // Highlight the entire line
+    textarea.setSelectionRange(charIndex, charIndex + lines[lineIndex].length);
+    
+    // Estimate scroll coordinates using a line-height proxy
+    const approxLineHeight = 22; // px per line
+    textarea.scrollTop = Math.max(0, (lineIndex - 2) * approxLineHeight);
+  };
 
   // Compute direct and transitive connections
   const { directEdges, transitiveEdges } = useMemo(() => {
@@ -183,6 +243,34 @@ export default function DocumentEditor({
       keywords: ['callout', 'highlight', 'info', 'box', 'tip', 'alert']
     },
     {
+      id: 'meeting-minutes',
+      title: 'Meeting Minutes',
+      description: 'Insert structured meeting details, agenda & attendees',
+      icon: '📅',
+      text: `\n# 📅 Meeting Minutes: [Topic]
+**Date:** ${new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+**Time:** ${new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+
+### 👥 Attendees
+- [ ] Name 1 (Organizer)
+- [ ] Name 2
+- [ ] Name 3
+
+### 🎯 Agenda & Objectives
+1. Goal / Focus of today's review
+2. Core discussion points
+3. Actions and next steps
+
+### 📝 Discussion & Notes
+- Write discussion notes here...
+
+### ✅ Action Items
+- [ ] Task 1 — @Owner (Due: [Date])
+- [ ] Task 2 — @Owner (Due: [Date])
+\n`,
+      keywords: ['meeting', 'minutes', 'agenda', 'attendees', 'date', 'template', 'notes', 'session']
+    },
+    {
       id: 'convert-database',
       title: 'Convert to Database',
       description: '⚡ Shift current page mode to a structured database',
@@ -289,7 +377,7 @@ export default function DocumentEditor({
   const addPageComment = () => {
     if (!commentText.trim()) return;
     const newComment: PageComment = {
-      id: `comment-${Date.now()}`,
+      id: `comment-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
       author: commenterName,
       text: commentText.trim(),
       createdAt: new Date().toISOString()
@@ -441,6 +529,17 @@ export default function DocumentEditor({
             <MessageSquare className="h-3 w-3" />
             <span>💬 Discussion ({page.comments?.length || 0})</span>
           </button>
+
+          <button
+            onClick={() => setShowToc(!showToc)}
+            className={`flex items-center gap-1 hover:text-[#37352F] hover:bg-[#F1F1EF] px-1.5 py-0.5 rounded cursor-pointer transition-all ${
+              showToc ? 'text-purple-700 bg-purple-50 hover:bg-purple-100' : 'text-[#37352F]/40'
+            }`}
+            title="Toggle interactive Table of Contents sidebar navigation list"
+          >
+            <AlignLeft className="h-3 w-3 text-purple-600" />
+            <span>📋 Outline ({headings.length})</span>
+          </button>
           
           <span className="ml-auto font-mono text-[9px] text-[#37352F]/30 uppercase font-medium">
             Modified {new Date(page.updatedAt || page.createdAt).toLocaleTimeString()}
@@ -468,6 +567,133 @@ export default function DocumentEditor({
             </div>
           )}
         </div>
+
+        {/* ---------------- 2.5 Table of Contents (TOC) Component ---------------- */}
+        {showToc && (
+          <div className="mb-6 bg-purple-50/25 border border-purple-100/90 rounded-xl p-4 select-none animate-[fadeIn_0.15s_ease-out]">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-purple-100/60 pb-3 mb-3">
+              <div className="flex items-center gap-2">
+                <AlignLeft className="h-4 w-4 text-purple-600 animate-pulse" />
+                <span className="text-[11px] font-bold text-purple-950 uppercase tracking-widest">
+                  Table of Contents Map
+                </span>
+                <span className="text-[10px] bg-purple-100 text-purple-800 font-mono font-bold px-1.5 py-0.5 rounded-full">
+                  {headings.length}
+                </span>
+              </div>
+
+              {/* Document health metrics */}
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1 text-[9.5px] font-medium text-slate-500 bg-white border border-[#E8E8E6] rounded-md px-2.5 py-0.5 shadow-3xs">
+                  <FileText className="h-3.5 w-3.5 text-emerald-600" />
+                  <span>{wordCount} words</span>
+                </div>
+                <div className="flex items-center gap-1 text-[9.5px] font-medium text-slate-500 bg-white border border-[#E8E8E6] rounded-md px-2.5 py-0.5 shadow-3xs">
+                  <BookOpen className="h-3.5 w-3.5 text-blue-600" />
+                  <span>~ {readingTime} min read</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Controls Row: Search filters & Quick Add Headings if empty */}
+            <div className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center mb-3">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-purple-400" />
+                <input
+                  type="text"
+                  value={tocSearch}
+                  onChange={(e) => setTocSearch(e.target.value)}
+                  placeholder="Filter key headings search..."
+                  className="w-full text-xs pl-8 pr-3 py-1.5 bg-white border border-purple-100 hover:border-purple-200 focus:border-purple-400 focus:ring-0 focus:outline-[#C084FC]/25 rounded-lg outline-none transition-all placeholder:text-purple-400/55 select-text text-purple-900 font-sans"
+                />
+              </div>
+
+              {/* Quick Template Heading Injector tool */}
+              <div className="flex items-center gap-1">
+                <span className="text-[8.5px] text-purple-700/60 font-mono uppercase tracking-wide mr-1 hidden sm:inline">Add Section:</span>
+                <button
+                  onClick={() => {
+                    const currentVal = page.content || '';
+                    onUpdatePage(page.id, { content: currentVal + '\n\n# New Heading Section\nType details here...\n' });
+                  }}
+                  className="text-[9px] font-bold px-2 py-1 bg-white hover:bg-purple-50 border border-purple-100 text-purple-850 rounded hover:border-purple-300 transition-all cursor-pointer flex items-center gap-0.5"
+                >
+                  <Plus className="h-2.5 w-2.5" />
+                  <span>H1</span>
+                </button>
+                <button
+                  onClick={() => {
+                    const currentVal = page.content || '';
+                    onUpdatePage(page.id, { content: currentVal + '\n\n## Sub-category Section\nType details here...\n' });
+                  }}
+                  className="text-[9px] font-bold px-2 py-1 bg-white hover:bg-purple-50 border border-purple-100 text-purple-850 rounded hover:border-purple-300 transition-all cursor-pointer flex items-center gap-0.5"
+                >
+                  <Plus className="h-2.5 w-2.5" />
+                  <span>H2</span>
+                </button>
+              </div>
+            </div>
+
+            {/* List of anchors */}
+            <div className="max-h-[160px] overflow-y-auto pr-1 scrollbar-thin select-none">
+              {(() => {
+                const query = tocSearch.toLowerCase().trim();
+                const filtered = headings.filter(h => h.text.toLowerCase().includes(query));
+
+                if (headings.length === 0) {
+                  return (
+                    <div className="text-center py-4 bg-white/70 rounded-lg border border-dashed border-purple-200/55">
+                      <p className="text-[10px] text-purple-600/80 font-bold">No headings found yet.</p>
+                      <p className="text-[9.5px] text-purple-500/65 mt-0.5 font-medium">Type `# Heading` or use the quick buttons above to begin structuring your document!</p>
+                    </div>
+                  );
+                }
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-3">
+                      <p className="text-[10px] text-slate-400 font-medium">No headings match "{tocSearch}"</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex flex-col gap-1 pl-1">
+                    {filtered.map((item) => {
+                      const indents = {
+                        1: 'pl-0 font-bold text-slate-800 text-xs py-1',
+                        2: 'pl-4 text-slate-600 text-[11px] py-1',
+                        3: 'pl-8 text-slate-500 text-[10px] py-0.5'
+                      }[item.level];
+
+                      const prefixColors = {
+                        1: 'bg-purple-500',
+                        2: 'bg-indigo-400',
+                        3: 'bg-slate-300'
+                      }[item.level];
+
+                      return (
+                        <button
+                          key={item.id}
+                          onClick={() => handleHeadingClick(item.lineIndex)}
+                          className={`group/toc flex items-center justify-between w-full hover:bg-white/90 px-2 py-0.5 rounded-lg border border-transparent hover:border-purple-100 transition-all cursor-pointer text-left ${indents}`}
+                        >
+                          <span className="flex items-center gap-2 truncate">
+                            <span className={`h-1.5 w-1.5 rounded-full ${prefixColors} shrink-0 group-hover/toc:scale-125 transition-transform`} />
+                            <span className="truncate group-hover/toc:text-purple-700 font-sans">{item.text}</span>
+                          </span>
+                          <span className="text-[8px] font-mono font-semibold text-slate-400 group-hover/toc:text-purple-500 select-none pb-0.5 px-1 bg-slate-50 border border-[#E8E8E6] rounded invisible group-hover/toc:visible">
+                            Go to L. {item.lineIndex + 1}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
 
         {/* ---------------- 3. Interactive Discussion Comments Section ---------------- */}
         {showComments && (
