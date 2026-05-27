@@ -1,17 +1,173 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { DocumentPage, DatabasePropertyConfig, PropertyType } from '../types';
-import { Plus, Settings, ChevronRight, HelpCircle, Calendar, Hash, Type as TextIcon, CheckSquare, Trash2, List, Columns, Table } from 'lucide-react';
+import { 
+  Plus, 
+  Settings, 
+  ChevronRight, 
+  HelpCircle, 
+  Calendar, 
+  Hash, 
+  Type as TextIcon, 
+  CheckSquare, 
+  Trash2, 
+  List, 
+  Columns, 
+  Table,
+  Sparkles,
+  ToggleLeft
+} from 'lucide-react';
 
 interface DatabaseViewProps {
   databasePage: DocumentPage;
   pages: DocumentPage[];
-  onCreateRow: (databaseId: string, initialProperties?: Record<string, any>) => void;
+  onCreateRow: (databaseId: string, initialProperties?: Record<string, any>, customTitle?: string) => void;
   onUpdateRowProperty: (rowId: string, propertyName: string, value: any) => void;
   onAddColumn: (databaseId: string, name: string, type: PropertyType, options: string[]) => void;
   onDeleteColumn: (databaseId: string, columnId: string) => void;
   onSelectPage: (id: string) => void;
   onDeletePage: (id: string) => void;
+  onUpdatePage: (id: string, updates: Partial<DocumentPage>) => void;
 }
+
+interface PresetRowDef {
+  title: string;
+  properties: Record<string, any>;
+}
+
+interface DatabasePresetDef {
+  name: string;
+  icon: string;
+  description: string;
+  propertyConfigs: DatabasePropertyConfig[];
+  sampleRows: PresetRowDef[];
+}
+
+const DATABASE_PRESETS: DatabasePresetDef[] = [
+  {
+    name: 'Product Agile Sprint Board',
+    icon: '🏃',
+    description: 'Track ongoing engineering sprints, features, priority tiers, and release checkpoints.',
+    propertyConfigs: [
+      { id: 'status-col-1', name: 'Status', type: 'select', options: ['Backlog', 'Ready', 'In Progress', 'QA Status', 'Completed ✅'] },
+      { id: 'priority-col-2', name: 'Priority', type: 'select', options: ['Urgent 🚨', 'High', 'Medium', 'Low'] },
+      { id: 'assignee-col-3', name: 'Assignee', type: 'text', options: [] },
+      { id: 'due-date-col-4', name: 'Due Date', type: 'date', options: [] }
+    ],
+    sampleRows: [
+      {
+        title: 'Design SVG Interactive Graph Layout Diagram',
+        properties: {
+          'Status': 'In Progress',
+          'Priority': 'High',
+          'Assignee': 'Bruce Banner',
+          'Due Date': '2026-06-05'
+        }
+      },
+      {
+        title: 'Formulate Transitive Closure Nodes Relationship API',
+        properties: {
+          'Status': 'Ready',
+          'Priority': 'Urgent 🚨',
+          'Assignee': 'Tony Stark',
+          'Due Date': '2026-05-30'
+        }
+      }
+    ]
+  },
+  {
+    name: 'Syllabus & Course Reading List',
+    icon: '📖',
+    description: 'Structure academic syllabuses, book lists, chapter milestones, and ongoing notes.',
+    propertyConfigs: [
+      { id: 'read-status-1', name: 'Status', type: 'select', options: ['To Read', 'Active Reading ✍️', 'Finished'] },
+      { id: 'topic-category-2', name: 'Topic', type: 'select', options: ['Computer Architecture', 'Distributed Systems', 'Philosophy', 'Product Design'] },
+      { id: 'author-3', name: 'Author', type: 'text', options: [] },
+      { id: 'deadline-4', name: 'Target Date', type: 'date', options: [] }
+    ],
+    sampleRows: [
+      {
+        title: 'Designing Data-Intensive Applications',
+        properties: {
+          'Status': 'Active Reading ✍️',
+          'Topic': 'Distributed Systems',
+          'Author': 'Martin Kleppmann',
+          'Target Date': '2026-06-25'
+        }
+      },
+      {
+        title: 'The Design of Everyday Things',
+        properties: {
+          'Status': 'Finished',
+          'Topic': 'Product Design',
+          'Author': 'Don Norman',
+          'Target Date': '2026-04-18'
+        }
+      }
+    ]
+  },
+  {
+    name: 'CRM Client Sales Deals Pipeline',
+    icon: '💰',
+    description: 'Track live corporate contacts, negotiations, follow-up dates, and values.',
+    propertyConfigs: [
+      { id: 'stage-1', name: 'Deal Stage', type: 'select', options: ['Discovery Lead', 'Proposal Sent', 'Negotiation', 'Contract Signed 🎉', 'Closed Lost'] },
+      { id: 'value-2', name: 'Estimated Value ($)', type: 'text', options: [] },
+      { id: 'lead-contact-3', name: 'Lead Contact', type: 'text', options: [] },
+      { id: 'follow-up-4', name: 'Follow-Up Date', type: 'date', options: [] }
+    ],
+    sampleRows: [
+      {
+        title: 'Acme Corp Enterprise SaaS Licensing',
+        properties: {
+          'Deal Stage': 'Proposal Sent',
+          'Estimated Value ($)': '$45,000',
+          'Lead Contact': 'Sarah Connor',
+          'Follow-Up Date': '2026-06-12'
+        }
+      },
+      {
+        title: 'Stark Industries Arc Engine Integration License',
+        properties: {
+          'Deal Stage': 'Contract Signed 🎉',
+          'Estimated Value ($)': '$1,200,000',
+          'Lead Contact': 'Tony Stark',
+          'Follow-Up Date': '2026-05-28'
+        }
+      }
+    ]
+  },
+  {
+    name: 'Habits & Wellness Routine Log',
+    icon: '⚡',
+    description: 'Establish daily workouts, technology readings, or mindfulness practices.',
+    propertyConfigs: [
+      { id: 'habit-cat-1', name: 'Category', type: 'select', options: ['Fitness', 'Professional Learning', 'Mindfulness', 'Hobbies'] },
+      { id: 'freq-2', name: 'Frequency', type: 'select', options: ['Daily', 'Weekly', 'Bi-Weekly'] },
+      { id: 'done-today-3', name: 'Completed Today', type: 'checkbox', options: [] },
+      { id: 'streak-notes-4', name: 'Progress Notes', type: 'text', options: [] }
+    ],
+    sampleRows: [
+      {
+        title: 'Read 25 pages of software design documentation',
+        properties: {
+          'Category': 'Professional Learning',
+          'Frequency': 'Daily',
+          'Completed Today': true,
+          'Progress Notes': 'Finished the Force-directed layout coordinate calculations'
+        }
+      },
+      {
+        title: 'Morning breathing yoga session (15min)',
+        properties: {
+          'Category': 'Mindfulness',
+          'Frequency': 'Daily',
+          'Completed Today': false,
+          'Progress Notes': 'Plan to practice before booting server sandbox'
+        }
+      }
+    ]
+  }
+];
 
 export default function DatabaseView({
   databasePage,
@@ -22,6 +178,7 @@ export default function DatabaseView({
   onDeleteColumn,
   onSelectPage,
   onDeletePage,
+  onUpdatePage,
 }: DatabaseViewProps) {
   // Fetch rows belonging to this database
   const rows = pages.filter((p) => p.databaseId === databasePage.id);
@@ -29,6 +186,7 @@ export default function DatabaseView({
 
   // Multiple Notion Layouts
   const [layoutMode, setLayoutMode] = useState<'table' | 'kanban' | 'list'>('table');
+  const [showPresetsSection, setShowPresetsSection] = useState(true);
 
   // Select configurations for Kanban grouping
   const selectConfigs = propertyConfigs.filter((cfg) => cfg.type === 'select');
@@ -57,6 +215,21 @@ export default function DatabaseView({
     setShowAddCol(false);
   };
 
+  const applyPresetBlueprint = (preset: typeof DATABASE_PRESETS[0]) => {
+    const defaultTitle = databasePage.title === 'Untitled Database' || !databasePage.title;
+    const newTitle = defaultTitle ? preset.name : databasePage.title;
+
+    onUpdatePage(databasePage.id, {
+      title: newTitle,
+      icon: preset.icon,
+      propertyConfigs: preset.propertyConfigs
+    });
+
+    preset.sampleRows.forEach((row) => {
+      onCreateRow(databasePage.id, row.properties, row.title);
+    });
+  };
+
   const getPropIcon = (type: PropertyType) => {
     switch (type) {
       case 'text':
@@ -71,7 +244,7 @@ export default function DatabaseView({
   };
 
   // Kanban Columns Logic
-  const kanbanColumns = activeGroupCfg ? ['', ...(activeGroupCfg.options || [])] : ['No select column'];
+  const kanbanColumns = activeGroupCfg ? ['', ...(activeGroupCfg.options || [])] : [''];
 
   const getRowsForKanbanColumn = (option: string) => {
     if (!activeGroupCfg) return rows;
@@ -94,7 +267,13 @@ export default function DatabaseView({
           <div className="flex items-center gap-2">
             <span className="text-xl">{databasePage.icon || '🗃️'}</span>
             <div>
-              <h3 className="font-bold text-[#37352F] text-sm">{databasePage.title}</h3>
+              <input
+                type="text"
+                value={databasePage.title}
+                onChange={(e) => onUpdatePage(databasePage.id, { title: e.target.value })}
+                className="font-extrabold text-[#37352F] text-sm bg-transparent outline-none focus:border-b border-[#37352F] pb-0.5"
+                placeholder="Untitled Database Schema"
+              />
               <p className="text-[10px] text-[#37352F]/50 font-medium">
                 Columns: {propertyConfigs.length} • Rows: {rows.length}
               </p>
@@ -137,6 +316,15 @@ export default function DatabaseView({
         </div>
 
         <div className="flex items-center gap-2 shrink-0">
+          <button
+            onClick={() => setShowPresetsSection(!showPresetsSection)}
+            className="flex items-center gap-1 text-[10px] px-2.5 py-1.5 hover:bg-[#F1F1EF] border border-[#E8E8E6] rounded-lg text-[#37352F]/70 font-bold transition-all"
+            title="Toggle Database Presets & Blueprints suggestions bar"
+          >
+            <Sparkles className="h-3.5 w-3.5 text-purple-600 animate-pulse" />
+            <span>Presets Suggestions</span>
+          </button>
+
           {/* Kanban option selector */}
           {layoutMode === 'kanban' && selectConfigs.length > 1 && (
             <div className="flex items-center gap-1 text-xs">
@@ -158,332 +346,400 @@ export default function DatabaseView({
             className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-[#E8E8E6] text-xs rounded-lg hover:bg-[#F1F1EF] text-[#37352F] font-bold cursor-pointer transition-all"
           >
             <Settings className="h-3.5 w-3.5 text-indigo-600" />
-            <span>Customize Properties</span>
-          </button>
-
-          <button
-            onClick={() => onCreateRow(databasePage.id)}
-            className="flex items-center gap-1 px-3 py-1.5 bg-[#37352F] hover:bg-[#4B4841] text-white text-xs rounded-lg font-bold cursor-pointer transition-colors shadow-2xs active:scale-95"
-          >
-            <Plus className="h-3.5 w-3.5" />
-            <span>Add Row Page</span>
+            <span>Manage Columns</span>
           </button>
         </div>
       </div>
 
-      {/* Add Column Popup Configurator */}
+      {/* ----------------- INTUITIVE BLUEPRINT SUGGESTIONS PANEL ----------------- */}
+      {showPresetsSection && (
+        <div className="p-4 bg-purple-50/40 border-b border-[#E8E8E6] select-none text-normal-body animate-[fadeIn_0.12s_ease-out]">
+          <div className="flex items-center justify-between mb-1.5">
+            <span className="text-[10px] font-bold text-purple-950 flex items-center gap-1.5 uppercase tracking-widest leading-none">
+              <Sparkles className="h-3.5 w-3.5 text-purple-600 animate-pulse shrink-0" />
+              <span>Blueprint Database Suggesstions</span>
+            </span>
+            <button 
+              onClick={() => setShowPresetsSection(false)}
+              className="text-[9px] text-purple-800 hover:text-purple-950 font-extrabold uppercase"
+            >
+              ✕ Hide
+            </button>
+          </div>
+          <p className="text-[11.5px] text-purple-900/70 mb-3 leading-relaxed max-w-2xl">
+            Need a starting structure? Click any recommendation blueprint below to instantly configure custom selects, приоритет tags, text categories, date columns, and functional sample lists!
+          </p>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+            {DATABASE_PRESETS.map((p) => (
+              <button
+                key={p.name}
+                onClick={() => {
+                  applyPresetBlueprint(p);
+                  setShowPresetsSection(false);
+                }}
+                className="group flex flex-col text-left p-3 bg-white border border-[#E8E8E6] hover:border-purple-300 hover:ring-2 hover:ring-purple-200/50 rounded-xl cursor-pointer transition-all hover:-translate-y-0.5 shadow-3xs"
+              >
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-lg bg-purple-50 p-1.5 rounded-lg border border-purple-100">{p.icon}</span>
+                  <span className="font-extrabold text-[12px] text-[#37352F]">{p.name}</span>
+                </div>
+                <p className="text-[10.5px] text-[#37352F]/60 line-clamp-2 leading-relaxed mb-3">
+                  {p.description}
+                </p>
+                <div className="mt-auto pt-2 border-t border-[#F1F1EF] w-full flex flex-wrap gap-1 text-[8px] font-mono font-bold text-purple-800">
+                  {p.propertyConfigs.map(c => (
+                    <span key={c.name} className="px-1.5 py-0.5 bg-purple-50/75 border border-purple-100 rounded uppercase">
+                      {c.name}
+                    </span>
+                  ))}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add Column drawer controls */}
       {showAddCol && (
-        <div className="p-4 bg-[#F7F7F5] border-b border-[#E8E8E6] grid grid-cols-1 md:grid-cols-4 gap-3 items-end shadow-2xs">
-          <div>
-            <label className="block text-[10px] text-[#37352F]/60 font-semibold mb-1 uppercase tracking-wider">Property Name</label>
-            <input
-              type="text"
-              placeholder="e.g. Assignee, Scope..."
-              value={colName}
-              onChange={(e) => setColName(e.target.value)}
-              className="w-full text-xs px-2.5 py-1.5 bg-white border border-[#E8E8E6] rounded text-[#37352F] focus:outline-none focus:border-[#37352F]"
-            />
+        <div className="bg-[#FAF9F6] border-b border-[#E8E8E6] p-4 text-xs select-none">
+          <div className="max-w-xl flex flex-col gap-3">
+            <h4 className="font-bold text-[#37352F] uppercase tracking-wide text-[10px] text-[#37352F]/65">Create Schema Column Property</h4>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+              <div className="flex flex-col gap-1">
+                <span className="font-bold text-[#37352F]/70 text-[10px] uppercase">Property Name</span>
+                <input
+                  type="text"
+                  placeholder="e.g. Due Date"
+                  value={colName}
+                  onChange={(e) => setColName(e.target.value)}
+                  className="bg-white border border-[#E8E8E6] rounded-md px-2.5 py-1 text-xs text-[#37352F] outline-none"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="font-bold text-[#37352F]/70 text-[10px] uppercase">Cell Value Type</span>
+                <select
+                  value={colType}
+                  onChange={(e) => setColType(e.target.value as PropertyType)}
+                  className="bg-white border border-[#E8E8E6] rounded-md px-2 py-1 text-xs outline-none"
+                >
+                  <option value="text">Text value</option>
+                  <option value="select">Custom select dropdown menu</option>
+                  <option value="checkbox">Toggle checkbox</option>
+                  <option value="date">Date calendar picker</option>
+                </select>
+              </div>
+
+              <div className="flex flex-col gap-1">
+                <span className="font-bold text-[#37352F]/70 text-[10px] uppercase">Select options</span>
+                <input
+                  type="text"
+                  disabled={colType !== 'select'}
+                  placeholder="Comma-separated: High, Low"
+                  value={colOptionsStr}
+                  onChange={(e) => setColOptionsStr(e.target.value)}
+                  className="bg-white border border-[#E8E8E6] rounded-md px-2 py-1 text-xs outline-none disabled:bg-zinc-100/60"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mt-1">
+              <button
+                onClick={handleCreateColumn}
+                className="px-4 py-1.5 bg-[#37352F] hover:bg-[#4B4841] text-white rounded-lg font-bold"
+              >
+                Append Column Schema
+              </button>
+              
+              <button
+                onClick={() => setShowAddCol(false)}
+                className="px-3 py-1.5 hover:bg-[#E8E8E6] rounded-lg text-zinc-500 hover:text-black font-semibold"
+              >
+                Close
+              </button>
+            </div>
           </div>
 
-          <div>
-            <label className="block text-[10px] text-[#37352F]/60 font-semibold mb-1 uppercase tracking-wider">Type</label>
-            <select
-              value={colType}
-              onChange={(e) => setColType(e.target.value as PropertyType)}
-              className="w-full text-xs px-2.5 py-1.5 bg-white border border-[#E8E8E6] rounded text-[#37352F] focus:outline-none focus:border-[#37352F] cursor-pointer"
-            >
-              <option value="text">Text Segment</option>
-              <option value="select">Select (Dropdown)</option>
-              <option value="date">Calendar Date</option>
-              <option value="checkbox">Checkbox Status</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-[10px] text-[#37352F]/60 font-semibold mb-1 uppercase tracking-wider">
-              Options (comma separated)
-            </label>
-            <input
-              type="text"
-              placeholder="e.g. Low, Medium, High"
-              value={colOptionsStr}
-              onChange={(e) => setColOptionsStr(e.target.value)}
-              disabled={colType !== 'select'}
-              className="w-full text-xs px-2.5 py-1.5 bg-white border border-[#E8E8E6] rounded text-[#37352F] disabled:opacity-40 focus:outline-none focus:border-[#37352F]"
-            />
-          </div>
-
-          <div className="flex gap-2">
-            <button
-               onClick={handleCreateColumn}
-               className="flex-1 text-xs py-1.5 bg-[#37352F] hover:bg-[#4B4841] rounded text-white font-bold cursor-pointer transition-colors"
-            >
-              Add Property
-            </button>
-            <button
-              onClick={() => setShowAddCol(false)}
-              className="px-2.5 py-1.5 bg-white border border-[#E8E8E6] hover:bg-[#F1F1EF] rounded text-[#37352F]/70 text-xs font-semibold cursor-pointer"
-            >
-              Cancel
-            </button>
-          </div>
+          {/* Delete columns header indicators */}
+          {propertyConfigs.length > 0 && (
+            <div className="mt-4 border-t border-[#E8E8E6] pt-3.5">
+              <span className="block font-bold text-[#37352F]/50 uppercase text-[10px] mb-2 tracking-widest">Remove columns properties</span>
+              <div className="flex flex-wrap gap-2">
+                {propertyConfigs.map((col) => (
+                  <div key={col.id} className="flex items-center gap-1.5 bg-white border border-[#E8E8E6] rounded-md pl-2.5 pr-1.5 py-1 font-semibold text-xs text-[#37352F]">
+                    <span>{col.name}</span>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Remove column "${col.name}" and delete all values of it across database sheets?`)) {
+                          onDeleteColumn(databasePage.id, col.id);
+                        }
+                      }}
+                      className="p-0.5 hover:bg-red-50 text-red-650 hover:text-red-800 rounded"
+                      title="Delete column"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       {/* LAYOUT 1: TABLE VIEW */}
       {layoutMode === 'table' && (
-        <div className="overflow-x-auto flex-1 bg-white">
-          <table className="w-full border-collapse text-left min-w-[650px]">
+        <div className="overflow-x-auto select-none bg-white">
+          <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="border-b border-[#E8E8E6] bg-[#F7F7F5] text-[10px] text-[#37352F]/50 font-bold tracking-widest select-none uppercase">
-                <th className="py-3 px-4 w-[280px]">Row Page Title</th>
+              <tr className="bg-[#FAF9F6]/50 border-b border-[#E8E8E6] text-[10px] font-bold text-[#37352F]/40 tracking-widest uppercase select-none">
+                <th className="py-2.5 px-4 font-bold border-r border-[#E8E8E6]">Document Title Node</th>
                 {propertyConfigs.map((col) => (
-                  <th key={col.id} className="py-3 px-4 min-w-[140px]">
-                    <div className="flex items-center justify-between group">
-                      <span className="flex items-center gap-1.5">
-                        {getPropIcon(col.type)}
-                        {col.name}
-                      </span>
-                      <button
-                        onClick={() => onDeleteColumn(databasePage.id, col.id)}
-                        className="p-0.5 text-rose-600 hover:bg-rose-50 rounded opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-                        title="Delete property column"
-                      >
-                        <Trash2 className="h-2.5 w-2.5" />
-                      </button>
+                  <th key={col.id} className="py-2.5 px-4 font-bold border-r border-[#E8E8E6]">
+                    <div className="flex items-center gap-1.5">
+                      {getPropIcon(col.type)}
+                      <span>{col.name}</span>
                     </div>
                   </th>
                 ))}
-                <th className="py-3 px-4 w-[80px]">Actions</th>
+                <th className="py-2.5 px-4 text-right">Actions</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#E8E8E6] text-xs">
+            <tbody className="divide-y divide-[#E8E8E6] select-text">
               {rows.map((row) => (
-                <tr key={row.id} className="hover:bg-[#F7F7F5]/60 transition-colors group">
-                  <td className="py-2 px-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => onSelectPage(row.id)}
-                        className="p-1 hover:bg-[#E8E8E6] text-[#37352F]/60 hover:text-[#37352F] rounded transition-colors"
-                        title="Open page details editor"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </button>
-                      <span className="text-sm shrink-0">{row.icon || '📄'}</span>
+                <tr key={row.id} className="hover:bg-[#F7F7F5]/40 transition-colors group text-sm">
+                  {/* Title node */}
+                  <td className="p-2 border-r border-[#E8E8E6] align-middle">
+                    <div className="flex items-center gap-1.5 min-w-[200px]">
+                      <span className="text-base shrink-0">{row.icon || '📄'}</span>
                       <input
                         type="text"
                         value={row.title}
                         onChange={(e) => onUpdateRowProperty(row.id, '_title', e.target.value)}
-                        className="bg-transparent border border-transparent hover:border-[#E8E8E6] focus:border-[#37352F] focus:bg-white px-1.5 py-1 rounded text-[#37352F] font-bold truncate outline-none transition-all w-full"
+                        className="bg-transparent border border-transparent hover:border-[#E8E8E6] focus:border-[#37352F] text-xs font-bold text-[#37352F] outline-none rounded px-1.5 py-0.5 w-full flex-1"
                       />
                     </div>
                   </td>
+
+                  {/* Schema values */}
                   {propertyConfigs.map((col) => {
                     const val = row.properties[col.name];
+
                     return (
-                      <td key={col.id} className="py-2 px-4">
-                        {col.type === 'text' && (
-                          <input
-                            type="text"
-                            value={val || ''}
-                            onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.value)}
-                            placeholder="Empty cell..."
-                            className="bg-transparent border border-transparent hover:border-[#E8E8E6]/80 focus:border-[#37352F] focus:bg-white px-2 py-1 rounded text-[#37352F] outline-none w-full transition-all"
-                          />
-                        )}
-                        {col.type === 'checkbox' && (
-                          <div className="flex items-center">
+                      <td key={col.id} className="p-2 border-r border-[#E8E8E6] align-middle">
+                        <div className="min-w-[140px]">
+                          {col.type === 'select' ? (
+                            <select
+                              value={val || ''}
+                              onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.value)}
+                              className="text-xs bg-transparent border border-transparent hover:border-[#E8E8E6] rounded w-full py-1 px-1 text-[#37352F] focus:bg-white focus:outline-none focus:border-[#37352F] cursor-pointer"
+                            >
+                              <option value="">— empty</option>
+                              {col.options?.map((opt) => (
+                                <option key={opt} value={opt}>
+                                  {opt}
+                                </option>
+                              ))}
+                            </select>
+                          ) : col.type === 'checkbox' ? (
+                            <div className="flex items-center justify-center py-1">
+                              <input
+                                type="checkbox"
+                                checked={!!val}
+                                onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.checked)}
+                                className="h-4 w-4 rounded border-[#E8E8E6] text-[#37352F] focus:ring-0 cursor-pointer"
+                              />
+                            </div>
+                          ) : col.type === 'date' ? (
                             <input
-                              type="checkbox"
-                              checked={!!val}
-                              onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.checked)}
-                              className="bg-white border-[#E8E8E6] rounded text-[#37352F] focus:ring-0 cursor-pointer h-4 w-4"
+                              type="date"
+                              value={val || ''}
+                              onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.value)}
+                              className="text-xs bg-transparent border border-transparent hover:border-[#E8E8E6] rounded px-1 py-0.5 w-full font-mono"
                             />
-                          </div>
-                        )}
-                        {col.type === 'date' && (
-                          <input
-                            type="date"
-                            value={val || ''}
-                            onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.value)}
-                            className="bg-transparent select-text border border-transparent hover:border-[#E8E8E6] text-[#37352F] text-xs rounded px-1.5 py-0.5 outline-none cursor-pointer"
-                          />
-                        )}
-                        {col.type === 'select' && (
-                          <select
-                            value={val || ''}
-                            onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.value)}
-                            className="bg-transparent cursor-pointer border border-transparent hover:border-[#E8E8E6] text-[#37352F] text-xs rounded px-1.5 py-0.5 focus:bg-white outline-none w-full"
-                          >
-                            <option value="">—</option>
-                            {col.options?.map((opt) => (
-                              <option key={opt} value={opt}>
-                                {opt}
-                              </option>
-                            ))}
-                          </select>
-                        )}
+                          ) : (
+                            <input
+                              type="text"
+                              value={val || ''}
+                              onChange={(e) => onUpdateRowProperty(row.id, col.name, e.target.value)}
+                              className="text-xs bg-transparent border border-transparent hover:border-[#E8E8E6] rounded px-1.5 py-0.5 w-full text-[#37352F] focus:bg-white focus:outline-none focus:border-[#37352F]"
+                              placeholder="Empty text cell..."
+                            />
+                          )}
+                        </div>
                       </td>
                     );
                   })}
-                  <td className="py-2 px-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button
-                      onClick={() => {
-                        if (confirm(`Delete row "${row.title || 'Untitled'}"?`)) {
-                          onDeletePage(row.id);
-                        }
-                      }}
-                      className="p-1 hover:bg-[#E8E8E6] hover:text-rose-600 text-[#37352F]/40 rounded transition-colors cursor-pointer"
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+
+                  <td className="p-2 text-right align-middle">
+                    <div className="flex items-center justify-end gap-1 px-2">
+                      <button
+                        onClick={() => onSelectPage(row.id)}
+                        className="p-1 px-2.5 text-[10.5px] hover:bg-[#F1F1EF] text-indigo-700 hover:text-indigo-950 rounded transition-all flex items-center gap-0.5 font-bold cursor-pointer"
+                        title="Open sub-page canvas editor"
+                      >
+                        <ChevronRight className="h-3.5 w-3.5" />
+                        <span>Open Editor</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          if (confirm(`Remove this row item "${row.title || 'UntitledNode'}" and purge document?`)) {
+                            onDeletePage(row.id);
+                          }
+                        }}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-rose-50 hover:text-rose-700 rounded text-[#37352F]/40 cursor-pointer transition-opacity"
+                        title="Delete entry"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
+
               {rows.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={propertyConfigs.length + 2}
-                    className="py-12 text-center text-[#37352F]/40 italic"
-                  >
-                    This database has no pages. Click "Add Row Page" to populate rows!
+                  <td colSpan={propertyConfigs.length + 2} className="py-14 text-center text-[#37352F]/40 italic">
+                    This table has no rows. Click "Add entry page" below to append, or select a Preset Blueprint above!
                   </td>
                 </tr>
               )}
             </tbody>
           </table>
+
+          {/* Table bottom Row addition */}
+          <div className="p-2 bg-white border-t border-[#E8E8E6] select-none">
+            <button
+              onClick={() => onCreateRow(databasePage.id)}
+              className="px-3 py-1.5 text-xs text-[#37352F]/60 hover:text-black hover:bg-[#F1F1EF] rounded-lg flex items-center gap-1 font-bold cursor-pointer transition-colors"
+            >
+              <Plus className="h-4 w-4" />
+              <span>Add a row page</span>
+            </button>
+          </div>
         </div>
       )}
 
       {/* LAYOUT 2: KANBAN BOARD VIEW */}
       {layoutMode === 'kanban' && (
-        <div className="bg-[#FAF9F6] p-4 overflow-x-auto min-h-[450px]">
+        <div className="border-t border-[#E8E8E6] bg-[#FAF9F6]/30 p-4 overflow-x-auto select-none">
           {!activeGroupCfg ? (
-            <div className="py-12 flex flex-col items-center justify-center text-center text-xs p-5 bg-white border border-dashed border-[#E8E8E6] rounded-xl">
-              <Columns className="h-8 w-8 text-[#37352F]/20 mb-2" />
-              <span className="font-bold text-[#37352F]">No 'Select' column found.</span>
-              <p className="text-[#37352F]/50 max-w-[340px] mt-1">
-                To group keys on a Kanban board, please click <strong>Customize Properties</strong> above and add a <strong>Select (Dropdown)</strong> column type first (e.g. "Status" or "Priority")!
-              </p>
+            <div className="py-12 text-center text-xs text-[#37352F]/50 font-medium">
+              Kanban view requires at least one select property. Click "Manage Columns" to build a dropdown select field.
             </div>
           ) : (
-            <div className="flex gap-4 items-start pb-4 min-w-[700px]">
-              {kanbanColumns.map((colOption) => {
-                const columnRows = getRowsForKanbanColumn(colOption);
-                const colTitle = colOption || 'Unassigned / No Option';
-                return (
-                  <div key={colTitle} className="w-80 flex-shrink-0 bg-[#F1F1EF]/40 border border-[#E8E8E6] rounded-xl p-3 flex flex-col gap-3">
-                    
-                    {/* Column Header */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <span className={`text-[10px] uppercase font-bold px-2 py-0.5 rounded tracking-wider ${
-                          colOption === 'Idea' ? 'bg-[#EBF5FF] text-blue-700' :
-                          colOption === 'In Progress' ? 'bg-[#FEF3C7] text-amber-800' :
-                          colOption === 'Done' ? 'bg-[#ECFDF5] text-emerald-700' :
-                          colOption ? 'bg-[#F3F4F6] text-[#37352F]/80' : 'bg-rose-50 text-rose-700'
-                        }`}>
-                          {colTitle}
-                        </span>
-                        <span className="text-[10px] font-mono text-[#37352F]/40 font-bold">({columnRows.length})</span>
-                      </div>
-                    </div>
-
-                    {/* Cards Container */}
-                    <div className="flex flex-col gap-2 min-h-[50px]">
-                      {columnRows.map((row) => (
-                        <div key={row.id} className="bg-white border border-[#E8E8E6] rounded-lg p-3 hover:border-[#37352F]/50 transition-all shadow-2xs group flex flex-col gap-2">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-1.5 truncate">
-                              <span className="text-base shrink-0">{row.icon || '📄'}</span>
-                              <input
-                                type="text"
-                                value={row.title}
-                                onChange={(e) => onUpdateRowProperty(row.id, '_title', e.target.value)}
-                                className="bg-transparent border border-transparent hover:border-[#E8E8E6] focus:border-[#37352F] text-xs font-bold text-[#37352F] outline-none rounded truncate cursor-text"
-                              />
-                            </div>
-                            <button
-                              onClick={() => onSelectPage(row.id)}
-                              className="p-1 hover:bg-[#F1F1EF] text-[#37352F]/50 hover:text-[#37352F] rounded transition-colors"
-                              title="Open card detail"
-                            >
-                              <ChevronRight className="h-3.5 w-3.5" />
-                            </button>
-                          </div>
-
-                          {/* Render other secondary properties in card body */}
-                          <div className="flex flex-col gap-1 text-[10px] text-[#37352F]/70 pt-1 border-t border-[#F1F1EF]">
-                            {propertyConfigs.filter(cfg => cfg.id !== activeGroupCfg.id).map(cfg => {
-                              const val = row.properties[cfg.name];
-                              return (
-                                <div key={cfg.id} className="flex items-center justify-between py-0.5">
-                                  <span className="text-[#37352F]/50 flex items-center gap-1">
-                                    {getPropIcon(cfg.type)}
-                                    {cfg.name}:
-                                  </span>
-                                  {cfg.type === 'checkbox' ? (
-                                    <input
-                                      type="checkbox"
-                                      checked={!!val}
-                                      onChange={(e) => onUpdateRowProperty(row.id, cfg.name, e.target.checked)}
-                                      className="h-3 w-3 border-[#E8E8E6] text-[#37352F] rounded focus:ring-0"
-                                    />
-                                  ) : (
-                                    <span className="font-semibold truncate max-w-[120px]">
-                                      {val || '—'}
-                                    </span>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          {/* Swap group directly on board */}
-                          <div className="flex items-center justify-between text-[10px] text-[#37352F]/60 pt-2 border-t border-[#F1F1EF] mt-1">
-                            <span className="font-semibold text-[9px] uppercase tracking-wider text-[#37352F]/40">Move item:</span>
-                            <select
-                              value={row.properties[activeGroupCfg.name] || ''}
-                              onChange={(e) => onUpdateRowProperty(row.id, activeGroupCfg.name, e.target.value)}
-                              className="bg-[#FAF9F6] border border-[#E8E8E6] hover:bg-[#F1F1EF] text-[10px] font-bold rounded px-1 py-0.5 cursor-pointer text-[#37352F] outline-none"
-                            >
-                              <option value="">— Unassigned</option>
-                              {activeGroupCfg.options?.map(opt => (
-                                <option key={opt} value={opt}>{opt}</option>
-                              ))}
-                            </select>
-                          </div>
-
-                          {/* Quick delete */}
-                          <div className="self-end opacity-0 group-hover:opacity-100 transition-opacity">
-                            <button
-                              onClick={() => {
-                                if (confirm(`Delete card "${row.title || 'Untitled'}"?`)) {
-                                  onDeletePage(row.id);
-                                }
-                              }}
-                              className="text-rose-600 hover:text-rose-800 text-[10px] font-semibold flex items-center gap-0.5 mt-1"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                              <span>Delete</span>
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Column Add Task Button (Sets status directly!) */}
-                    <button
-                      onClick={() => onCreateRow(databasePage.id, colOption ? { [activeGroupCfg.name]: colOption } : {})}
-                      className="w-full text-xs py-1.5 hover:bg-[#F1F1EF] text-[#37352F]/50 hover:text-[#37352F] rounded-lg border border-dashed border-[#E8E8E6] flex items-center justify-center gap-1 font-bold cursor-pointer transition-colors mt-2"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      <span>Add row page</span>
-                    </button>
-
+            <div className="flex items-start gap-4 min-w-[800px]">
+              {kanbanColumns.map((colOption) => (
+                <div key={colOption} className="flex-1 bg-white/60 border border-[#E8E8E6] rounded-xl p-3 flex flex-col gap-3.5 shadow-3xs">
+                  {/* Kanban stage header card */}
+                  <div className="flex items-center justify-between border-b border-[#F1F1EF] pb-2">
+                    <span className="text-[10px] uppercase font-mono font-black text-[#37352F] flex items-center gap-1 bg-[#F1F1EF] px-2 py-0.5 rounded border border-[#E8E8E6]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-indigo-500 animate-pulse" />
+                      <span>{colOption || '📎 Unassigned'}</span>
+                    </span>
+                    <span className="text-[10px] text-[#37352F]/45 font-mono font-bold">
+                      {getRowsForKanbanColumn(colOption).length} items
+                    </span>
                   </div>
-                );
-              })}
+
+                  {/* Kanban card loop list */}
+                  <div className="flex flex-col gap-2.5 min-h-[180px] overflow-y-auto pr-1">
+                    {getRowsForKanbanColumn(colOption).map((row) => (
+                      <div key={row.id} className="group bg-white border border-[#E8E8E6] hover:border-indigo-400 p-3.5 rounded-xl shadow-2xs hover:shadow-sm transition-all flex flex-col gap-2 text-xs">
+                        {/* Title and navigation node */}
+                        <div className="flex items-center justify-between gap-1.5 font-bold">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                            <span className="text-sm shrink-0">{row.icon || '📄'}</span>
+                            <input
+                              type="text"
+                              value={row.title}
+                              onChange={(e) => onUpdateRowProperty(row.id, '_title', e.target.value)}
+                              className="bg-transparent border border-transparent hover:border-[#E8E8E6] focus:border-[#37352F] text-xs font-bold text-[#37352F] outline-none rounded truncate cursor-text"
+                            />
+                          </div>
+                          <button
+                            onClick={() => onSelectPage(row.id)}
+                            className="p-1 hover:bg-[#F1F1EF] text-[#37352F]/50 hover:text-[#37352F] rounded transition-colors"
+                            title="Open card detail"
+                          >
+                            <ChevronRight className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+
+                        {/* Render other secondary properties in card body */}
+                        <div className="flex flex-col gap-1 text-[10px] text-[#37352F]/70 pt-1 border-t border-[#F1F1EF]">
+                          {propertyConfigs.filter(cfg => cfg.id !== activeGroupCfg.id).map(cfg => {
+                            const val = row.properties[cfg.name];
+                            return (
+                              <div key={cfg.id} className="flex items-center justify-between py-0.5">
+                                <span className="text-[#37352F]/50 flex items-center gap-1">
+                                  {getPropIcon(cfg.type)}
+                                  {cfg.name}:
+                                </span>
+                                {cfg.type === 'checkbox' ? (
+                                  <input
+                                    type="checkbox"
+                                    checked={!!val}
+                                    onChange={(e) => onUpdateRowProperty(row.id, cfg.name, e.target.checked)}
+                                    className="h-3 w-3 border-[#E8E8E6] text-[#37352F] rounded focus:ring-0"
+                                  />
+                                ) : (
+                                  <span className="font-semibold truncate max-w-[120px]">
+                                    {val || '—'}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Swap group directly on board */}
+                        <div className="flex items-center justify-between text-[10px] text-[#37352F]/60 pt-2 border-t border-[#F1F1EF] mt-1">
+                          <span className="font-semibold text-[9px] uppercase tracking-wider text-[#37352F]/40">Move item:</span>
+                          <select
+                            value={row.properties[activeGroupCfg.name] || ''}
+                            onChange={(e) => onUpdateRowProperty(row.id, activeGroupCfg.name, e.target.value)}
+                            className="bg-[#FAF9F6] border border-[#E8E8E6] hover:bg-[#F1F1EF] text-[10px] font-bold rounded px-1 py-0.5 cursor-pointer text-[#37352F] outline-none"
+                          >
+                            <option value="">— Unassigned</option>
+                            {activeGroupCfg.options?.map(opt => (
+                              <option key={opt} value={opt}>{opt}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Quick delete */}
+                        <div className="self-end opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button
+                            onClick={() => {
+                              if (confirm(`Delete card "${row.title || 'Untitled'}"?`)) {
+                                onDeletePage(row.id);
+                              }
+                            }}
+                            className="text-rose-605 hover:text-rose-800 text-[10px] font-semibold flex items-center gap-0.5 mt-1 cursor-pointer"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Column Add Task Button (Sets status directly!) */}
+                  <button
+                    onClick={() => onCreateRow(databasePage.id, colOption ? { [activeGroupCfg.name]: colOption } : {})}
+                    className="w-full text-xs py-1.5 hover:bg-[#F1F1EF] text-[#37352F]/50 hover:text-[#37352F] rounded-lg border border-dashed border-[#E8E8E6] flex items-center justify-center gap-1 font-bold cursor-pointer transition-colors mt-2"
+                  >
+                    <Plus className="h-3.5 w-3.5" />
+                    <span>Add row page</span>
+                  </button>
+
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -491,9 +747,9 @@ export default function DatabaseView({
 
       {/* LAYOUT 3: VERTICAL LIST VIEW */}
       {layoutMode === 'list' && (
-        <div className="flex flex-col border-t border-[#E8E8E6] divide-y divide-[#E8E8E6] bg-white">
+        <div className="flex flex-col border-t border-[#E8E8E6] divide-y divide-[#E8E8E6] bg-white text-sm">
           {rows.map((row) => (
-            <div key={row.id} className="flex items-center justify-between p-3.5 hover:bg-[#F7F7F5]/70 transition-colors group">
+            <div key={row.id} className="flex items-center justify-between p-3 px-4 hover:bg-[#F7F7F5]/70 transition-colors group">
               <div className="flex items-center gap-2.5 min-w-0">
                 <button
                   onClick={() => onSelectPage(row.id)}
@@ -537,7 +793,7 @@ export default function DatabaseView({
                   onClick={() => {
                     if (confirm(`Delete list element "${row.title}"?`)) onDeletePage(row.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#E8E8E6] hover:text-rose-600 rounded text-[#37352F]/40 cursor-pointer transition-opacity"
+                  className="opacity-0 group-hover:opacity-100 p-1 hover:bg-[#E8E8E6] hover:text-rose-600 rounded text-[#37352F]/40 cursor-pointer transition-opacity animate-[fadeIn_0.1s_ease-out]"
                   title="Delete row"
                 >
                   <Trash2 className="h-3.5 w-3.5" />

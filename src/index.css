@@ -1,1 +1,17 @@
 @import "tailwindcss";
+
+@theme {
+  --text-xs: 13px;
+  --text-sm: 15px;
+  --text-base: 17px;
+}
+
+/* Base resets to elevate reading comfort and normal text legibility */
+p, 
+textarea, 
+input, 
+select, 
+.text-normal-body {
+  font-size: 15px;
+  line-height: 1.625;
+}

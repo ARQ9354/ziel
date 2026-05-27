@@ -169,11 +169,16 @@ export default function App() {
   };
 
   // Callback to create generic page/documents or databases
-  const handleCreatePage = (isDatabase: boolean, isDatabaseRowId: string | null = null, initialProperties?: Record<string, any>) => {
+  const handleCreatePage = (
+    isDatabase: boolean,
+    isDatabaseRowId: string | null = null,
+    initialProperties?: Record<string, any>,
+    customTitle?: string
+  ) => {
     const newId = `page-${Date.now()}`;
     const newPage: DocumentPage = {
       id: newId,
-      title: isDatabase ? 'Untitled Database' : isDatabaseRowId ? 'Untitled Node entry' : 'Untitled Document',
+      title: customTitle || (isDatabase ? 'Untitled Database' : isDatabaseRowId ? 'Untitled Node entry' : 'Untitled Document'),
       icon: isDatabase ? '🗃️' : '📄',
       content: isDatabase 
         ? `# Untitled Database\n\nSheet container details.` 
@@ -461,12 +466,13 @@ export default function App() {
                   <DatabaseView
                     databasePage={activePage}
                     pages={pages}
-                    onCreateRow={(dbId, initialProps) => handleCreatePage(false, dbId, initialProps)}
+                    onCreateRow={(dbId, initialProps, customTitle) => handleCreatePage(false, dbId, initialProps, customTitle)}
                     onUpdateRowProperty={handleUpdateRowProperty}
                     onAddColumn={handleAddDatabaseColumn}
                     onDeleteColumn={handleDeleteDatabaseColumn}
                     onSelectPage={setActivePageId}
                     onDeletePage={handleDeletePage}
+                    onUpdatePage={handleUpdatePageGeneric}
                   />
                 ) : (
                   <DocumentEditor
@@ -489,12 +495,13 @@ export default function App() {
                     <DatabaseView
                       databasePage={activePage}
                       pages={pages}
-                      onCreateRow={(dbId, initialProps) => handleCreatePage(false, dbId, initialProps)}
+                      onCreateRow={(dbId, initialProps, customTitle) => handleCreatePage(false, dbId, initialProps, customTitle)}
                       onUpdateRowProperty={handleUpdateRowProperty}
                       onAddColumn={handleAddDatabaseColumn}
                       onDeleteColumn={handleDeleteDatabaseColumn}
                       onSelectPage={setActivePageId}
                       onDeletePage={handleDeletePage}
+                      onUpdatePage={handleUpdatePageGeneric}
                     />
                   ) : (
                     <DocumentEditor

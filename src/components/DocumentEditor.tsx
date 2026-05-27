@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { DocumentPage, LinkConnection, PageComment } from '../types';
 import { computeTransitiveConnections } from '../utils/graphUtils';
 import { 
@@ -132,6 +132,157 @@ export default function DocumentEditor({
     } finally {
       setIsTagging(false);
     }
+  };
+
+  // ---------- NOTION-STYLE SLASH COMMANDS MENU ----------
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [showSlashMenu, setShowSlashMenu] = useState(false);
+  const [slashQuery, setSlashQuery] = useState('');
+  const [slashIndex, setSlashIndex] = useState(-1);
+  const [selectedMenuIndex, setSelectedMenuIndex] = useState(0);
+
+  const ALL_COMMANDS = useMemo(() => [
+    {
+      id: 'bullet-list',
+      title: 'Bullet List',
+      description: 'Insert a rapid bullet list item',
+      icon: '•',
+      text: '\n- ',
+      keywords: ['bullet', 'list', 'dot', 'outline', '-']
+    },
+    {
+      id: 'numbered-list',
+      title: 'Numbered List',
+      description: 'Insert a sequential ordered key item',
+      icon: '1.',
+      text: '\n1. ',
+      keywords: ['numbered', 'list', 'sequence', '1', 'order']
+    },
+    {
+      id: 'todo-list',
+      title: 'To-Do Checked List',
+      description: 'Add an interactive task checkbox row',
+      icon: '☑️',
+      text: '\n- [ ] ',
+      keywords: ['todo', 'check', 'task', 'checklist', 'status']
+    },
+    {
+      id: 'toggle-list',
+      title: 'Toggle Accordion List',
+      description: 'Add collapsible accordion details tag block',
+      icon: '📁',
+      text: '\n<details>\n<summary>📁 Toggle List (Click to expand)</summary>\n\nWrite nested details or targets here!\n</details>\n',
+      keywords: ['toggle', 'accordion', 'collapse', 'details', 'hide']
+    },
+    {
+      id: 'callout-box',
+      title: 'Callout Highlighting Info',
+      description: 'Visually distinct alert or tip highlight block',
+      icon: '💡',
+      text: '\n> 💡 **INFO CALLOUT:**\n> Type premium workflow guidelines or system warnings here!\n',
+      keywords: ['callout', 'highlight', 'info', 'box', 'tip', 'alert']
+    },
+    {
+      id: 'convert-database',
+      title: 'Convert to Database',
+      description: '⚡ Shift current page mode to a structured database',
+      icon: '🗃️',
+      text: () => {
+        onUpdatePage(page.id, {
+          isDatabase: true,
+          propertyConfigs: [
+            { id: 'status-col-1', name: 'Status', type: 'select', options: ['Backlog', 'Ready', 'In Progress', 'Completed ✅'] },
+            { id: 'priority-col-2', name: 'Priority', type: 'select', options: ['Urgent 🚨', 'High', 'Medium', 'Low'] },
+            { id: 'assignee-col-3', name: 'Assignee', type: 'text', options: [] }
+          ]
+        });
+      },
+      keywords: ['database', 'db', 'sheet', 'grid', 'table', 'convert']
+    },
+    {
+      id: 'ai-summary',
+      title: 'AI Summary Outline',
+      description: '🤖 Invoke Aura AI Copilot model to summarize page details',
+      icon: '🤖',
+      text: () => {
+        handleAiSummarize();
+      },
+      keywords: ['ai', 'summarize', 'copilot', 'aura', 'outline']
+    },
+    {
+      id: 'divider-line',
+      title: 'Divider Line',
+      description: 'Insert a horizontal visual separator line',
+      icon: '—',
+      text: '\n\n---\n',
+      keywords: ['divider', 'line', 'hr', 'separate']
+    },
+    {
+      id: 'quote-block',
+      title: 'Vintage Quote Block',
+      description: 'Add an elegant italic formatted display quote block',
+      icon: '💬',
+      text: '\n> "The best way to predict the future is to invent it."\n',
+      keywords: ['quote', 'block', 'cite', 'italic', 'vintage']
+    },
+    {
+      id: 'heading-1',
+      title: 'Heading 1',
+      description: 'Main sections large displays heading',
+      icon: 'H1',
+      text: '\n# ',
+      keywords: ['h1', 'heading', 'title', 'main']
+    },
+    {
+      id: 'heading-2',
+      title: 'Heading 2',
+      description: 'Medium sub-heading category title',
+      icon: 'H2',
+      text: '\n## ',
+      keywords: ['h2', 'heading', 'sub', 'minor']
+    },
+    {
+      id: 'heading-3',
+      title: 'Heading 3',
+      description: 'Small nested sub-heading label',
+      icon: 'H3',
+      text: '\n### ',
+      keywords: ['h3', 'heading', 'sub']
+    }
+  ], [page.id, onUpdatePage, handleAiSummarize]);
+
+  const filteredCommands = useMemo(() => {
+    if (!slashQuery) return ALL_COMMANDS;
+    return ALL_COMMANDS.filter((cmd) =>
+      cmd.title.toLowerCase().includes(slashQuery) ||
+      cmd.description.toLowerCase().includes(slashQuery) ||
+      cmd.keywords.some((k) => k.includes(slashQuery))
+    );
+  }, [slashQuery, ALL_COMMANDS]);
+
+  const handleApplyCommand = (insertText: string | (() => void)) => {
+    if (!textareaRef.current) return;
+    const textarea = textareaRef.current;
+    const currentVal = textarea.value;
+    const selStart = textarea.selectionStart;
+
+    if (typeof insertText === 'function') {
+      const newVal = currentVal.substring(0, slashIndex) + currentVal.substring(selStart);
+      onUpdatePage(page.id, { content: newVal });
+      setShowSlashMenu(false);
+      insertText();
+      return;
+    }
+
+    const newVal = currentVal.substring(0, slashIndex) + insertText + currentVal.substring(selStart);
+    onUpdatePage(page.id, { content: newVal });
+    setShowSlashMenu(false);
+
+    setTimeout(() => {
+      textarea.focus();
+      const newPos = slashIndex + insertText.length;
+      textarea.setSelectionRange(newPos, newPos);
+    }, 10);
   };
 
   // Comments Management
@@ -496,12 +647,98 @@ export default function DocumentEditor({
           </div>
 
           <textarea
+            ref={textareaRef}
             value={page.content}
-            onChange={(e) => onUpdatePage(page.id, { content: e.target.value })}
+            onChange={(e) => {
+              const text = e.target.value;
+              const selStart = e.target.selectionStart;
+              
+              onUpdatePage(page.id, { content: text });
+
+              const textBeforeCursor = text.substring(0, selStart);
+              const lastSlash = textBeforeCursor.lastIndexOf('/');
+              
+              if (lastSlash !== -1) {
+                const afterSlash = textBeforeCursor.substring(lastSlash + 1);
+                // Ensure no spaces or newlines have been typed after the slash
+                if (!afterSlash.includes(' ') && !afterSlash.includes('\n')) {
+                  setShowSlashMenu(true);
+                  setSlashQuery(afterSlash.toLowerCase());
+                  setSlashIndex(lastSlash);
+                  setSelectedMenuIndex(0);
+                  return;
+                }
+              }
+              setShowSlashMenu(false);
+            }}
+            onKeyDown={(e) => {
+              if (!showSlashMenu) return;
+
+              if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedMenuIndex((prev) => (prev + 1) % filteredCommands.length);
+              } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedMenuIndex((prev) => (prev - 1 + filteredCommands.length) % filteredCommands.length);
+              } else if (e.key === 'Enter') {
+                if (filteredCommands.length > 0) {
+                  e.preventDefault();
+                  handleApplyCommand(filteredCommands[selectedMenuIndex].text);
+                }
+              } else if (e.key === 'Escape') {
+                e.preventDefault();
+                setShowSlashMenu(false);
+              }
+            }}
+            onBlur={() => {
+              // Tiny timeout to let options mouseDown execute before popover closes
+              setTimeout(() => {
+                setShowSlashMenu(false);
+              }, 180);
+            }}
             rows={12}
-            placeholder="Type content details, markdown lists, checklist tasks here..."
-            className="w-full text-xs px-4 py-3.5 bg-[#FAF9F6]/50 border border-[#E8E8E6] hover:border-[#37352F]/35 focus:border-[#37352F] focus:bg-white rounded-xl text-[#37352F] font-sans leading-relaxed outline-none transition-all resize-y select-text min-h-[160px]"
+            placeholder="Type details... Press '/' to convert to Database, insert bullet/numbered lists, callouts, or toggle lists!"
+            className="w-full text-sm px-4 py-3.5 bg-[#FAF9F6]/50 border border-[#E8E8E6] hover:border-[#37352F]/35 focus:border-[#37352F] focus:bg-white rounded-xl text-[#37352F] font-sans leading-relaxed outline-none transition-all resize-y select-text min-h-[160px]"
           />
+
+          {/* Floater Slash Command Menu (Notion-style) */}
+          {showSlashMenu && filteredCommands.length > 0 && (
+            <div className="absolute left-4 right-4 bg-white border border-purple-200/95 rounded-xl shadow-xl p-2 z-50 max-h-56 overflow-y-auto scrollbar-thin select-none animate-[fadeIn_0.1s_ease-out] top-[50px] min-w-[285px]">
+              <div className="px-2.5 py-1 text-[9px] font-mono font-bold text-purple-700/60 uppercase tracking-widest border-b border-purple-50 mb-1 flex items-center justify-between">
+                <span>⚡ Notion Slash Commands</span>
+                <span>ESC to Close</span>
+              </div>
+              <div className="flex flex-col gap-0.5">
+                {filteredCommands.map((cmd, idx) => (
+                  <button
+                    key={cmd.id}
+                    onMouseDown={(e) => {
+                      e.preventDefault(); // Prevents blur event
+                      handleApplyCommand(cmd.text);
+                    }}
+                    className={`flex items-center gap-3 w-full p-1.5 rounded-lg text-left transition-all cursor-pointer ${
+                      idx === selectedMenuIndex
+                        ? 'bg-purple-50 text-purple-950 border border-purple-100 shadow-2xs'
+                        : 'border border-transparent hover:bg-[#F7F7F5] text-[#37352F]'
+                    }`}
+                  >
+                    <span className="flex items-center justify-center h-8 w-8 rounded-lg bg-purple-100 text-base font-bold select-none text-purple-850">
+                      {cmd.icon}
+                    </span>
+                    <div className="truncate flex-1">
+                      <strong className="block text-xs font-bold leading-normal">{cmd.title}</strong>
+                      <span className="text-[10px] text-[#37352F]/50 font-medium block leading-none truncate">{cmd.description}</span>
+                    </div>
+                    {idx === selectedMenuIndex && (
+                      <span className="text-[8.5px] px-1.5 py-0.5 bg-purple-100 text-purple-800 font-mono font-bold uppercase rounded shrink-0">
+                        press enter
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* ---------------- 5b. Get Started with (Quick Actions Buttons) ---------------- */}
